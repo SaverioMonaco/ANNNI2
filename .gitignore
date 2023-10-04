@@ -161,3 +161,6 @@ cython_debug/
 
 # Tensorini
 tensor_data/
+
+# Not my notebooks
+*_ig.ipynb
