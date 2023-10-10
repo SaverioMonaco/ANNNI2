@@ -1,18 +1,22 @@
 import numpy as np
 import pennylane as qml
 from jax import jit
+import jax.numpy as jnp
 from opt_einsum import contract
 import ANNNIgen
-import qcnn
 import mpsgen
+import qcnn
 import os
-from typing import Tuple, List, Callable, Any
+from typing import Tuple, List, Callable
+import itertools
+import tqdm
+import optax
 
 import matplotlib.pyplot as plt 
 from matplotlib.colors import ListedColormap
 
 class state:
-    def __init__(self, L : int, h : float, k : float, shapes : np.ndarray, tensors : np.ndarray, towave_func : Callable[[Any], Any]):
+    def __init__(self, L : int, h : float, k : float, shapes : np.ndarray, tensors : np.ndarray, towave_func : Callable):
         self.L, self.h, self.k = L, h, k
         self.shapes = shapes.astype(int)
         # This needs some explanation:
@@ -37,44 +41,6 @@ class state:
         self.MPS = [site.reshape(self.shapes[i]) for i, site in enumerate(np.array_split(tensors, self.splits)[:-1])]
 
         self.towave = lambda : towave_func(self.MPS)
-
-    def H(self):
-        """
-        Returns the ANNNI Hamiltonian with the correct values of L, h and k
-        """
-
-        # Interaction of spins with magnetic field
-        H = - self.h * qml.PauliZ(0)
-        for i in range(1, self.L):
-            H = H - self.h * qml.PauliZ(i)
-
-        # Interaction between spins (neighbouring):
-        for i in range(0, self.L - 1):
-            H = H + (-1) * (qml.PauliX(i) @ qml.PauliX(i + 1))
-
-        # Interaction between spins (next-neighbouring):
-        for i in range(0, self.L - 2):
-            H = H + (-1) * self.k * (qml.PauliX(i) @ qml.PauliX(i + 2))
-
-        return H 
-    
-    def __repr__(self):
-        repr_str = f'MPS state\n L = {self.L}\n h = {self.h}\n k = {self.k}\n shape of the MPS :\n'
-        # Many ifs to print nicely the shape array
-        for i, shape in enumerate(self.shapes): 
-            if i == 0:
-                repr_str += f' [{shape},'
-            elif i == len(self.shapes) - 1:
-                repr_str += f'  {shape}'
-            else:
-                repr_str += f'  {shape},'
-            if i == len(self.shapes) - 1:
-                repr_str += ']'
-            elif i % 2 != 0:
-                repr_str += '\n'
-            
-
-        return repr_str      
         
 class mps:
     def __init__(self, folder : str = '../tensor_data/', gpu : bool = False):
@@ -83,6 +49,14 @@ class mps:
         ###########################
         self.path = folder
 
+        self.col3 = [[0.456, 0.902, 0.635, 1],
+                     [0.400, 0.694, 0.800, 1],
+                     [0.922, 0.439, 0.439, 1]]
+
+        self.col4 = [[0.456, 0.902, 0.635, 1],
+                     [0.400, 0.694, 0.800, 1],
+                     [1.000, 0.514, 0.439, 1],
+                     [0.643, 0.012, 0.435, 1]]
         # Check if folder exists
         try: 
             files_all        = np.array(os.listdir(folder))
@@ -154,91 +128,106 @@ class mps:
         ###########################
         self.mpstowavefunc_subscript = mpsgen.get_subscript(self.L)
         if gpu:
-            self.get_psi = jit(lambda TT: contract(self.mpstowavefunc_subscript, *TT, backend='jax').flatten())
+            self.get_psi = lambda TT: contract(self.mpstowavefunc_subscript, *TT, backend='jax').flatten()
         else:
             self.get_psi = lambda TT: contract(self.mpstowavefunc_subscript, *TT).flatten() # type: ignore
 
-        self.MPS     = []
-        self.Hparams = []
-
+        self.n_states = len(self.hs)*len(self.ks)
+        self.MPS     = np.empty((self.n_states), dtype=object)
+        self.Hparams = np.full((self.n_states,2), np.nan)
         # We save the labels as integers (0,1,2,3) and as 2-qubits states
         # for an easier implementaion with the QCNN
-        self.labels3, self.labels3_state = [], []
-        self.labels4, self.labels4_state = [], []
-        def labeltostate(label):
-            if   label == 0: 
-                return [0,0,0,1]
-            elif label == 1: 
-                return [0,0,1,0]
-            elif label == 2:
-                return [0,1,0,0]
-            elif label == 3: 
-                return [1,0,0,0]
-            else: 
-                raise ValueError("Invalid label")
+        self.labels3, self.labels4 = np.full(self.n_states, np.nan, dtype=int), np.full(self.n_states, np.nan, dtype=int)
+        self.probs3, self.probs4   = np.full((self.n_states,4), np.nan, dtype=int), np.full((self.n_states,4), np.nan, dtype=int)
         # Well load all the states using h as inner variable loop
         # With this, I am assuming the variables h and k are disposed
         # into a grid, uniformly spaced
         # TODO: Read directly from the folder
-        for k in self.ks:
-            for h in self.hs:
-                    self.Hparams.append([h,k])
-                    label3,       label4       = ANNNIgen.get_labels(h,-k)
-                    label3_state, label4_state = labeltostate(label3), labeltostate(label4)
-                    self.labels3.append(label3)
-                    self.labels4.append(label4)
-                    self.labels3_state.append(label3_state)
-                    self.labels4_state.append(label4_state)
-                    shapes  = np.loadtxt(self.shape_str(h,k)).astype(int)
-                    tensors = np.loadtxt(self.tensor_str(h,k))
-                    self.MPS.append(state(self.L, h, k, shapes, tensors, self.get_psi))
 
-        self.Hparams = np.array(self.Hparams) # type: ignore
+        def toprob(label):
+            prob = np.array([0]*4)
+            prob[3-label] = 1
+            return prob
+        
+        for i, (h,k) in enumerate(itertools.product(self.hs, self.ks)):
+            y3, y4 = ANNNIgen.get_labels(h,-k)
+            shapes  = np.loadtxt(self.shape_str(h,k)).astype(int)
+            tensors = np.loadtxt(self.tensor_str(h,k))
+
+            self.Hparams[i] = h, k
+            self.labels3[i], self.labels4[i] = y3, y4
+            self.probs3[i],  self.probs4[i]  = toprob(y3), toprob(y4)
+            self.MPS[i] = state(self.L, h, k, shapes, tensors, self.get_psi)
+
         # Additionally, create a mask for the points in the axes (analitical)
         self.mask_analitical = np.logical_or(self.Hparams[:,0] == 0, self.Hparams[:,1] == 0) # type: ignore
-
+        self.mask_analitical_ferro = np.logical_or(np.logical_and(self.Hparams[:,0] < .5, self.Hparams[:,1] == 0),
+                                                   np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] <= 1))
+        self.mask_analitical_para  = np.logical_and(self.Hparams[:,0] >= .5, self.Hparams[:,1] == 0)
+        self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] ==  0, self.Hparams[:,1] >  1)
+        
         self.qcnn = qcnn.qcnn(self.L)
 
-    def plot_labels(self):
-        def ax_set_layout(ax, yaxis = True):
-            if yaxis:
-                ax.set_ylabel(r"$h$", fontsize=14)
-            ax.set_xlabel(r"$\kappa$", fontsize=14)
+    def train(self, epochs, PSI, Y, opt_state, show_progress = False):
+        params = self.qcnn.PARAMS
 
-            ticks_x = [-.5 , len(self.ks)/4 - .5, len(self.ks)/2 - .5 , 3*len(self.ks)/4 - .5, len(self.ks) - .5]
+        progress = tqdm.tqdm(range(epochs), position=0, leave=True)
+        for epoch in range(epochs):
+            params, opt_state, train_loss, accuracy = self.qcnn.update(opt_state, PSI, params, Y)
+
+            # Update progress bar
+            progress.update(1)
+            progress.set_description(f'Loss: {train_loss:.5f}')
             
-            plt.xticks(
-                ticks= ticks_x,
-                labels=[np.round(k * max(self.ks) / 4, 2) for k in range(0, 5)],
-            )
-            if yaxis:
-                ticks_y = [-.5 , len(self.hs)/4 - .5, len(self.hs)/2 - .5 , 3*len(self.hs)/4 - .5, len(self.hs) - .5]
-                plt.yticks(
-                    ticks=ticks_y,
-                    labels=[np.round(k * max(self.hs) / 4, 2) for k in range(4, -1, -1)],
-                )
-            else:
-                plt.yticks(ticks=[])
+        self.qcnn.PARAMS = params 
+        return opt_state
+    
+    def train3(self, epochs = 100, train_indices = [], batch_size = 0, lr = 1e-2):
+        self.qcnn.optimizer = optax.adam(learning_rate=lr)
+
+        if len(train_indices) == 0:
+            # Set the analytical points as training inputs
+            train_indices = np.arange(len(self.MPS)).astype(int)[self.mask_analitical]
+
+        opt_state = self.qcnn.optimizer.init(self.qcnn.PARAMS)
+        if batch_size == 0:
+            STATES = [mpsclass.towave() for mpsclass in self.MPS[train_indices]]
+            STATES = jnp.array(STATES)
+            YSTATES      = self.probs3[train_indices]
+            Y      = self.labels3[train_indices]
+            self.train(epochs, STATES, YSTATES, opt_state)
+
+    def predict(self, batch_size = 0, plot = False, eachclass = False):
+        if batch_size == 0:
+            STATES = [mpsclass.towave() for mpsclass in self.MPS]
+            STATES = jnp.array(STATES)
+            
+            PREDICTIONS = self.qcnn.jv_q_circuit(STATES, self.qcnn.PARAMS)
 
 
-        col3 = [[0.456, 0.902, 0.635, 1],
-                [0.400, 0.694, 0.800, 1],
-                [0.922, 0.439, 0.439, 1]]
+        ARGPREDICTIONS = np.argmax(PREDICTIONS, axis=1)
+        print(np.shape(PREDICTIONS))
+    
+        if plot: 
+            ANNNIgen.plot_layout(self, False, True, True, 'prediction', figure_already_defined = False)
+            plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (len(self.hs), len(self.ks))), axis=0))
 
-        col4 = [[0.456, 0.902, 0.635, 1],
-                [0.400, 0.694, 0.800, 1],
-                [1.000, 0.514, 0.439, 1],
-                [0.643, 0.012, 0.435, 1]]
+            if eachclass:
+                fig = plt.figure(figsize=(24,5))
+                for k in range(4):
+                    fig.add_subplot(1,4,k+1)
+                    plt.title(f'Class {k}')
+                    ANNNIgen.plot_layout(self, True, True, True, title='', figure_already_defined = True)
+                    plt.imshow(np.flip(np.reshape(PREDICTIONS[:,k], (len(self.hs), len(self.ks))), axis=0))
 
-        cm3 = ListedColormap(col3, name='color3')
-        cm4 = ListedColormap(col4, name='color4')
-        fig = plt.figure()
+    def plot_labels(self):
+        cm3 = ListedColormap(self.col3, name='color3')
+        cm4 = ListedColormap(self.col4, name='color4')
+        fig = plt.figure(figsize=(15,12))
         ax1 = fig.add_subplot(1,2,1)
-        ax_set_layout(ax1)
+        ANNNIgen.plot_layout(self, True, True, True, '3 Phases', figure_already_defined = True)
         ax1.imshow(np.rot90(np.reshape(self.labels3, (len(self.hs), len(self.ks)))), cmap=cm3)
-        ax1.set_title('3 Phases')
         ax2 = fig.add_subplot(1,2,2)
-        ax_set_layout(ax2, yaxis=False)
+        ANNNIgen.plot_layout(self, True, True, True, '3 Phases + floating phase', figure_already_defined = True)
         ax2.imshow(np.rot90(np.reshape(self.labels4, (len(self.hs), len(self.ks)))), cmap=cm4)
-        ax2.set_title('3 Phases + floating phase')
         

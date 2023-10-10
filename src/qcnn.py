@@ -1,10 +1,11 @@
 import numpy as np 
 import pennylane as qml 
 import circuits 
-from jax import vmap, jit
+from jax import vmap, jit, numpy as jnp, value_and_grad 
+import optax
 
 class qcnn:
-    def __init__(self, L, PARAMS = []):
+    def __init__(self, L, PARAMS = [], lr = 1e-2):
         """
         This class requires:
             STATES: an array of L wavefunctions (L, 2**n_qubits)
@@ -51,7 +52,6 @@ class qcnn:
             # Return the number of parameters
             return index + 1, active_wires
 
-
         self.device = qml.device('default.qubit.jax', wires=self.n_qubits)
         
         self.circuit_fun  = qcnn_circuit
@@ -60,6 +60,10 @@ class qcnn:
         dummystate = np.zeros(2**self.n_qubits) 
         dummystate[0] = 1  # State needs to be normal
         self.n_params, self.final_active_wires = self.circuit_fun(dummystate, np.zeros(10000)) 
+        if len(self.PARAMS) == 0: # if the parameters are the default ones...
+            self.PARAMS = np.random.normal(loc = 0, scale = 1, size = (self.n_params, )) # mean  = 0
+                                                                                         # stdev = 1 roghly each point is
+                                                                                         # in [-pi, +pi]
 
         def circuit(x, p):
             self.circuit_fun(x, p)
@@ -69,6 +73,30 @@ class qcnn:
         self.v_q_circuit  = vmap(self.q_circuit, (0, None))
         self.jv_q_circuit = jit(self.v_q_circuit)
 
+        def loss_fun(x, params, y, qcirc):
+            out = qcirc(x, params)
+            logprob = jnp.log(out)
+
+            return -jnp.multiply(logprob, y)
+                
+        self.get_loss    = lambda x, p, y: loss_fun(x, p, y, self.q_circuit)
+        self.v_get_loss  = vmap(self.get_loss, (0, None, 0))
+        self.jv_get_loss = jit(self.v_get_loss)
+
+        def mean_loss(p, X, Y):
+            # self.jv_get_loss outputs the single loss X[i]<->Y[i]
+            # we need to reduce the matrix to a single scalar value
+            return jnp.mean(self.jv_get_loss(X, p, Y))
+
+        def optimizer_update(opt, opt_state, X, p, Y):
+            loss, grads = value_and_grad(mean_loss)(p, X, Y)
+            updates, opt_state = opt.update(grads, opt_state)
+            p = optax.apply_updates(p, updates)
+            return p, opt_state, loss, 0
+        
+        # Update the optimizer
+        self.optimizer = optax.adam(learning_rate=lr)
+        self.update = jit(lambda opt_state, X, p, Y: optimizer_update(self.optimizer, opt_state, X, p, Y))
 
     def __repr__(self):
         # Create a dummy state to compute the number of parameters needed.
