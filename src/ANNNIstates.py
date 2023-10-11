@@ -242,12 +242,12 @@ class mps:
         self.mask_analitical = np.logical_or(self.Hparams[:,0] == 0, self.Hparams[:,1] == 0) # type: ignore
 
         # Mask for all the analytical ferromagnetic points
-        self.mask_analitical_ferro = np.logical_or(np.logical_and(self.Hparams[:,0] < .5, self.Hparams[:,1] == 0),
-                                                   np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] <= 1))
+        self.mask_analitical_ferro = np.logical_or(np.logical_and(self.Hparams[:,0] <  1, self.Hparams[:,1] == 0),
+                                                   np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] <= .5))
         # Mask for all the analytical paramagnetic points
-        self.mask_analitical_para  = np.logical_and(self.Hparams[:,0] >= .5, self.Hparams[:,1] == 0)
+        self.mask_analitical_para  = np.logical_and(self.Hparams[:,0] >= 1, self.Hparams[:,1] == 0)
         # Mask for all the analytical antiphase points
-        self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] ==  0, self.Hparams[:,1] >  1)
+        self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] ==  0, self.Hparams[:,1] >  .5)
         
         self.qcnn = qcnn.qcnn(self.L)
 
@@ -295,15 +295,17 @@ class mps:
         if len(train_indices) == 0:
             # Set the analytical points as training inputs
             train_indices = np.arange(len(self.MPS)).astype(int)[self.mask_analitical]
-        else: 
-            raise NotImplementedError("TODO: Batching")
+        else:         
+            train_indices = train_indices
 
         opt_state = self.qcnn.optimizer.init(self.qcnn.PARAMS)
         if batch_size == 0:
-            STATES  = jnp.array([mpsclass._towave() for mpsclass in self.MPS[train_indices]])
+            STATES  = jnp.array([mpsclass.towave() for mpsclass in self.MPS[train_indices]])
             YPROBS = self.probs3[train_indices]
             # Y     = self.labels3[train_indices]
             self._train(epochs, STATES, YPROBS, opt_state)
+        else: 
+            raise NotImplementedError("TODO: Batching")
 
     # TODO: Add batching functionality
     def predict(self, batch_size : int = 0, plot : bool = False, eachclass : bool = False):
@@ -339,7 +341,7 @@ class mps:
             cmap = self.cm4 
     
         if plot: 
-            ANNNIgen.plot_layout(self, False, True, True, 'prediction', figure_already_defined = False)
+            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
             plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (len(self.hs), len(self.ks))), axis=0), cmap=cmap)
 
             if eachclass:

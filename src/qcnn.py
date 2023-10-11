@@ -98,6 +98,21 @@ class qcnn:
         self.optimizer = optax.adam(learning_rate=lr)
         self.update = jit(lambda opt_state, X, p, Y: optimizer_update(self.optimizer, opt_state, X, p, Y))
 
+    def reset_params(self, loc = 0, scale = 1):
+        """Reset the parameters of the QCNN
+
+        Reinitialize the parameters of the QCNN according to a gaussian distribution
+
+        Parameters
+        ----------
+        loc : float 
+            Mean of the gaussian distribution
+        scale : float
+            Deviation of the gaussian distribution
+        """
+        self.PARAMS = np.random.normal(loc = loc, scale = scale, size = (self.n_params, )) # mean  = 0
+                                                                                           # stdev = 1 roghly each point is
+                                                                                           # in [-pi, +pi]
     def __repr__(self):
         # Create a dummy state to compute the number of parameters needed.
         dummystate = np.zeros(2**self.n_qubits) 
