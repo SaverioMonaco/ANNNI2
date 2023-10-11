@@ -242,12 +242,12 @@ class mps:
         self.mask_analitical = np.logical_or(self.Hparams[:,0] == 0, self.Hparams[:,1] == 0) # type: ignore
 
         # Mask for all the analytical ferromagnetic points
-        self.mask_analitical_ferro = np.logical_or(np.logical_and(self.Hparams[:,0] <  1, self.Hparams[:,1] == 0),
-                                                   np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] <= .5))
+        self.mask_analitical_ferro = np.logical_or(np.logical_and(self.Hparams[:,0] <= 1, self.Hparams[:,1] == 0),
+                                                   np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] < .5))
         # Mask for all the analytical paramagnetic points
-        self.mask_analitical_para  = np.logical_and(self.Hparams[:,0] >= 1, self.Hparams[:,1] == 0)
+        self.mask_analitical_para  = np.logical_and(self.Hparams[:,0] >  1, self.Hparams[:,1] ==  0)
         # Mask for all the analytical antiphase points
-        self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] ==  0, self.Hparams[:,1] >  .5)
+        self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] >= .5)
         
         self.qcnn = qcnn.qcnn(self.L)
 
@@ -272,8 +272,9 @@ class mps:
         return opt_state
     
     # TODO: Add batching functionality
-    def train3(self, epochs : int = 100, train_indices : NDArray = np.array([]), 
-                     batch_size : int = 0, lr : float = 1e-2):
+    def train(self, epochs : int = 100, train_indices : NDArray = np.array([]), 
+                    labels4 : bool = False,
+                    batch_size : int = 0, lr : float = 1e-2):
         """Training function for 3 classes
 
         Training function assuming 3 Phases: 
@@ -285,12 +286,16 @@ class mps:
             Number of epochs
         train_indices : NDArray
             Indexes of points to train
+        labels4 : boot
+            If True, use the 4-labels
         batch_size : int
             Number of MPS to used as input in a batch
         lr : float
             Learning Rate
         """
         self.qcnn.optimizer = optax.adam(learning_rate=lr)
+
+        probs = self.probs4 if labels4 else self.probs3
 
         if len(train_indices) == 0:
             # Set the analytical points as training inputs
@@ -301,8 +306,10 @@ class mps:
         opt_state = self.qcnn.optimizer.init(self.qcnn.PARAMS)
         if batch_size == 0:
             STATES  = jnp.array([mpsclass.towave() for mpsclass in self.MPS[train_indices]])
-            YPROBS = self.probs3[train_indices]
+            YPROBS = probs[train_indices]
             # Y     = self.labels3[train_indices]
+            print('Labels:', np.unique(np.argmax(YPROBS,axis=1)))
+            print('Number of training points:', len(YPROBS))
             self._train(epochs, STATES, YPROBS, opt_state)
         else: 
             raise NotImplementedError("TODO: Batching")
