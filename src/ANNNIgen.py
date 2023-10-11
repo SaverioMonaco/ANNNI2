@@ -1,68 +1,182 @@
 import numpy as np 
+from numpy.typing import NDArray
 import matplotlib.pyplot as plt
-from typing import List, Callable
+from typing import List, Callable, Union, Tuple
 
 ####################
 # TRANSITION LINES #
 ####################
 
-def paraanti(x):
-    if not (isinstance(x, int) or isinstance(x, float)):
+def paraanti(k : Union[float, NDArray]) -> Union[float, NDArray]:
+    """Paramagnetic-Antiphase line
+
+    Function for the Paramagnetic-Antiphase transition line.
+    Defined for k >= 0.5.
+    For k <= 0.5 it returns something close to 0
+
+    Parameters
+    ----------
+    k : float or NDArray
+        Value(s) of k
+
+    Returns
+    -------
+    float or NDArray
+        Value(s) of h at the transition point
+    """
+
+    # If input value is a numpy array, we have to set
+    # the input k values such that the ones outside its 
+    # domain do not lead to runtime errors
+    if not (isinstance(k, int) or isinstance(k, float)):
         # To avoid runtime error
-        x[x <= .5] = .5 + 1e-4
-    return 1.05 * np.sqrt((x - 0.5) * (x - 0.1))
+        k[k <= .5] = .5 + 1e-4
+
+    return 1.05 * np.sqrt((k - 0.5) * (k - 0.1))
 
 
-def paraferro(x):
-    if not (isinstance(x, int) or isinstance(x, float)):
+def paraferro(k : Union[float, NDArray]) -> Union[float, NDArray]:
+    """Paramagnetic-Ferromagnetic line
+
+    Function for the Paramagnetic-Ferromagnetic transition line.
+    Defined for k <= 0.5.
+    For k > 0.5 it returns something close to 0
+
+    Parameters
+    ----------
+    k : float or NDArray
+        Value(s) of k
+
+    Returns
+    -------
+    float or NDArray
+        Value(s) of h at the transition point
+    """
+
+    # If input value is a numpy array, we have to set
+    # the input k values such that the ones outside its 
+    # domain do not lead to runtime errors
+    if not (isinstance(k, int) or isinstance(k, float)):
         # To avoid runtime error
-        x[x >= .5] = .5
-        x[x <= 0 ] = 1e-4
-    return ((1 - x) / x) * (1 - np.sqrt((1 - 3 * x + 4 * x * x) / (1 - x)))
+        k[k >= .5] = .5
+        k[k <= 0 ] = 1e-4 # 0 is another problematic point
+
+    return ((1 - k) / k) * (1 - np.sqrt((1 - 3 * k + 4 * k * k) / (1 - k)))
 
 
-def b1(x):
-    if not (isinstance(x, int) or isinstance(x, float)):
-        x[x < .5] = .5
-    return 1.05 * (x - 0.5)
+def b1(k : Union[float, NDArray]) -> Union[float, NDArray]:
+    """Floating-phase line
+
+    Function for the Floating-phase line.
+    Defined for k >= 0.5.
+    For k < 0.5 it returns something close to 0
+
+    Parameters
+    ----------
+    k : float or NDArray
+        Value(s) of k
+
+    Returns
+    -------
+    float or NDArray
+        Value(s) of h at the transition point
+    """
+
+    # If input value is a numpy array, we have to set
+    # the input k values such that the ones outside its 
+    # domain do not lead to runtime errors
+    if not (isinstance(k, int) or isinstance(k, float)):
+        k[k < .5] = .5 # not defined for k < 0.5
+
+    return 1.05 * (k - 0.5)
 
 
-def peshel_emery(x):
-    if not (isinstance(x, int) or isinstance(x, float)):
+def peshel_emery(k : Union[float, NDArray]) -> Union[float, NDArray]:
+    """Peshel-Emery line
+
+    Function for the Peshel-Emery line.
+    Defined for k <= 0.5.
+
+    Parameters
+    ----------
+    k : float or NDArray
+        Value(s) of k
+
+    Returns
+    -------
+    float or NDArray
+        Value(s) of h at the transition point
+    """
+
+    # If input value is a numpy array, we have to set
+    # the input k values such that the ones outside its 
+    # domain do not lead to runtime errors
+    if not (isinstance(k, int) or isinstance(k, float)):
         # To avoid Runtime error
-        x[x < 1e-4] = 1e-4
-    
-    y = (1 / (4 * x)) - x
+        k[k < 1e-4] = 1e-4
+        # This function gets high values very quickly
+        y = (1 / (4 * k)) - k
+        # I am capping them to 2
+        # TODO: If we investigate a region for h > 2, this cap will become
+        #       visible in the plots
+        y[y > 2] = 2
 
-    y[y > 2] = 2
+        return y
+
+    y = (1 / (4 * k)) - k
+
     return y
 
-def get_labels(h, k):
+def get_labels(h : float, k : float) -> Tuple[int,int]:
+    """Get labels from h and k
+
+    Get the phase from h and k values. Get the corresponding phase
+    when considering or not the floating phase
+
+    Parameters
+    ----------
+    h : float
+        h value (y)
+    k : float
+        k value (x)
+
+    Returns
+    -------
+    Tuple[int, int]
+        (label (3phases), label (4phases))
+    """
+
+    # CASE 1: x=0 axis
+    # Added this case because of 0 encountering in division
     if k == 0:
-        # Added this case because of 0 encountering in division
         if h <= 1:
+            # Ferromagnetic, Ferromagnetic
             return 0, 0
         else:
+            # Paramagnetic, Paramagnetic
             return 1, 1
-    elif k > -.5:
-        # Left side (yes it is the left side, the phase plot is flipped due to x axis being from 0 to - kappa_max)
-        if h <= paraferro(-k):
+    # CASE 2: Left side (Paramagnetic - Ferromagnetic)
+    elif k < +.5:
+        if h <= paraferro(k):
+            # Ferromagnetic, Ferromagnetic
             return 0, 0
         else:
+            # Paramagnetic, Paramagnetic
             return 1, 1
+    # CASE 3: Right side (Antiphase - Floating Phase - Paramagnetic)
     else:
-        # Right side
-        if h <= paraanti(-k):
-            if h <= b1(-k):
+        if h <= paraanti(k):
+            if h <= b1(k):
+                # Antiphase, Antiphase
                 return 2, 2
             else:
+                # Antiphase, Floating Phase
                 return 2, 3
         else:
+            # Paramagnetic, Paramagnetic
             return 1, 1
         
-def getlines(
-    mpsclass, func: Callable, xrange: List[float], res: int = 100, **kwargs
-):
+def getlines(mpsclass, func: Callable, xrange: List[float], res: int = 100, **kwargs):
     """
     Plot function func from xrange[0] to xrange[1]
     This function uses the Hamiltonians class to plot the function 
@@ -101,7 +215,7 @@ def getlines(
 #  VISUALIZATION   #
 ####################
 
-def plot_layout(mpsclass, pe_line, phase_lines, floating, title, figure_already_defined = False):
+def plot_layout(mpsclass, pe_line, phase_lines, floating, title, haxis = True, figure_already_defined = False):
     """
     Many plotting functions here have the same layout, this function will be called inside the others
     to have a standard layout
@@ -124,7 +238,8 @@ def plot_layout(mpsclass, pe_line, phase_lines, floating, title, figure_already_
         plt.figure(figsize=(8, 6), dpi=80)
 
     # Set the axes according to the Hamiltonian class
-    plt.ylabel(r"$h$", fontsize=24)
+    if haxis:
+        plt.ylabel(r"$h$", fontsize=24)
     plt.xlabel(r"$\kappa$", fontsize=24)
     plt.tick_params(axis="x", labelsize=18)
     plt.tick_params(axis="y", labelsize=18)
@@ -136,10 +251,13 @@ def plot_layout(mpsclass, pe_line, phase_lines, floating, title, figure_already_
         ticks= ticks_x,
         labels=[np.round(k * kappa_max  / 4, 2) for k in range(0, 5)],
     )
-    plt.yticks(
-        ticks=ticks_y,
-        labels=[np.round(k * h_max / 4, 2) for k in range(4, -1, -1)],
-    )
+    if haxis:
+        plt.yticks(
+            ticks=ticks_y,
+            labels=[np.round(k * h_max / 4, 2) for k in range(4, -1, -1)],
+        )
+    else: 
+        plt.yticks(ticks=[])
 
     if pe_line:
         getlines(mpsclass, peshel_emery, [0, 0.5], res=100, color = "blue", alpha=1, ls = '--', dashes=(4,5), label = 'Peshel-Emery line')
