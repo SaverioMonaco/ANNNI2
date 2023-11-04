@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
 # Utils
-import os
+import os, copy
 from typing import Tuple, List, Callable
 from numpy.typing import NDArray
 import itertools
@@ -136,9 +136,20 @@ class mps:
                      [0.400, 0.694, 0.800, 1],
                      [1.000, 0.514, 0.439, 1],
                      [0.643, 0.012, 0.435, 1]]
+        
+        self.col8 = [[0.5, 0.9, 0.6, 1],
+                     [0.4, 0.7, 0.8, 1],
+                     [1.0, 0.5, 0.4, 1],
+                     [0.9, 0.9, 0.0, 1],
+                     [0.5/2, 0.9/2, 0.6/2, 1],
+                     [0.4/2, 0.7/2, 0.8/2, 1],
+                     [1.0/2, 0.5/2, 0.4/2, 1],
+                     [0.9/2, 0.9/2, 0.0/2, 1]]
+
         # Relative colormaps
         self.cm3 = ListedColormap(self.col3, name='color3')
         self.cm4 = ListedColormap(self.col4, name='color4')
+        self.cm8 = ListedColormap(self.col8, name='color8')
 
         ###########################
         #      CHECK FOLDER       #
@@ -275,10 +286,10 @@ class mps:
     def train(self, epochs : int = 100, train_indices : NDArray = np.array([]), 
                     labels4 : bool = False,
                     batch_size : int = 0, lr : float = 1e-2):
-        """Training function for 3 classes
+        """Training function
 
-        Training function assuming 3 Phases: 
-        Ferromagnetic, Paramagnetic and Antiphase
+        Training function assuming 3(4) Phases: 
+        Ferromagnetic, Paramagnetic and Antiphase (Floating Phase)
 
         Parameters
         ----------
@@ -312,10 +323,89 @@ class mps:
             print('Number of training points:', len(YPROBS))
             self._train(epochs, STATES, YPROBS, opt_state)
         else: 
-            raise NotImplementedError("TODO: Batching")
+            raise NotImplementedError("TODO: Batching not implemented, check model.train_rotate")
+        
+    def train_rotate(self, labels4 : bool = False, analytical : bool = True,
+                     samples_per_class : int = 10,
+                     epochs : int = 100, generations : int = 10,
+                     lr : float = 1e-2,
+                     show_samples : bool = True):
+        """Training function
+
+        Training function, different subsets of the input states will drawn randomly on rotation
+
+        Parameters
+        ----------
+        labels4 : bool
+            If True, use the 4-labels
+        analytical : bool
+            If True, only the analytical states will be drawn (this makes floating phase points being excluded)
+        samples_per_class : int
+            Number of states per class to be considered at the same time, tune it for memory optimization.
+        epochs : int
+            Number of epochs, an epoch is the number of training steps made on the same subset of inputs
+        generations : int
+            Number of generations, at the start of a generation, new inputs will be drawn and `epochs` training step will be perfomed
+        lr : float
+            Learning Rate
+        show_samples : bool
+            If True, show the samples drawn at each generation
+        """ 
+        
+        # By default, we consider each possible point
+        mask = np.arange(len(self.hs) * len(self.ks))
+
+        # Prepare training, check input variables:
+        if labels4:
+            n_samples = [samples_per_class]*4 
+            probs = self.probs4
+            labels = self.labels4
+        else:
+            n_samples = [samples_per_class]*3
+            probs = self.probs3
+            labels = self.labels3
+
+        if analytical:
+            mask = mask[self.mask_analitical]
+            if labels4:
+                print('Floating phase instance is excluded (change analytical to False)')
+                n_samples[-1] = 0 # if analytical, we do not have samples of the floating phase class 
+
+        self.qcnn.optimizer = optax.adam(learning_rate=lr)
+        opt_state = self.qcnn.optimizer.init(self.qcnn.PARAMS)
+
+        gen_progress = tqdm.tqdm(range(generations))
+        for gen in gen_progress:
+            gen_progress.set_description(f'Generation: {gen+1}/{generations}')
+
+            X = np.array([])
+            samples_map = copy.copy(self.labels4)
+            for phase, samples in enumerate(n_samples):
+                pool = np.intersect1d(mask, np.where(labels == phase))
+                x = np.random.choice(pool, samples, replace=False)
+                samples_map[x] = 4 + phase
+                X = np.append(X, x)
+
+            X = X.astype(int)
+            if show_samples:
+                plt.figure(figsize=(5,5))
+                ANNNIgen.plot_layout(self, True, True, True, title='', figure_already_defined = True)
+                plt.imshow(np.flip(np.reshape(samples_map, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm8)
+                plt.show() 
+                
+            STATES  = jnp.array([mpsclass.towave() for mpsclass in self.MPS[X]])
+            YPROBS = probs[X]
+            
+            # Y     = self.labels3[train_indices]
+            print(f'Generation: {gen}')
+            print('Labels:', np.unique(np.argmax(YPROBS,axis=1)))
+            print('Number of training points:', len(YPROBS))
+            opt_state = self._train(epochs, STATES, YPROBS, opt_state)
+
+            gen_progress.update(1)
 
     # TODO: Add batching functionality
-    def predict(self, batch_size : int = 0, plot : bool = False, eachclass : bool = False):
+    def predict(self, batch_size : int = 0, plot : bool = True, eachclass : bool = False, save : str = ''):
         """Output the predicted phases
 
         Output the predicted phases
@@ -363,6 +453,13 @@ class mps:
                 fig.subplots_adjust(right=0.8)
                 cbar_ax = fig.add_axes([0.82, 0.25, 0.02, 0.5]) # type: ignore
                 fig.colorbar(im, cax=cbar_ax)
+
+        if len(save) > 0:
+            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+            plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (len(self.hs), len(self.ks))), axis=0), cmap=cmap)
+            plt.savefig(save)
+
+        return PREDICTIONS        
 
     def plot_labels(self):
         """Plot the 'true' phases (the labels) of the ANNNI model
