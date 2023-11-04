@@ -113,6 +113,14 @@ class qcnn:
         self.PARAMS = np.random.normal(loc = loc, scale = scale, size = (self.n_params, )) # mean  = 0
                                                                                            # stdev = 1 roghly each point is
                                                                                            # in [-pi, +pi]
+
+    def save_params(self, file : str):
+        np.savetxt(file, self.PARAMS)
+
+    def load_params(self, file : str):
+        self.PARAMS = np.loadtxt(file)
+
+    
     def __repr__(self):
         # Create a dummy state to compute the number of parameters needed.
         dummystate = np.zeros(2**self.n_qubits) 
