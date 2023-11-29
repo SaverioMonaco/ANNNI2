@@ -22,7 +22,7 @@ import tqdm
 # Custom
 import ANNNIgen
 import mpsgen
-import qcnn
+import qcnn, autoencoder as enc
 
 class state:
     def __init__(self, L : int, h : float, k : float, shapes : NDArray, tensors : NDArray, _towave_func : Callable):
@@ -262,6 +262,8 @@ class mps:
         
         self.qcnn = qcnn.qcnn(self.L)
 
+        self.enc = enc.encoder(self.L)
+
     def _train(self, epochs, PSI, Y, opt_state):
         """
         Internal simple training function, to be called by other functions
@@ -473,4 +475,97 @@ class mps:
         plt.title('Labels (4)')
         ANNNIgen.plot_layout(self, True, True, True, '3 Phases + floating phase', haxis = False, figure_already_defined = True)
         ax2.imshow(np.flip(np.reshape(self.labels4, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm4)
+
+    def _train_enc(self, epochs, PSI, opt_state):
+        """
+        Internal simple training function, to be called by other functions
+        """
+        params = self.enc.PARAMS # Get the parameters from the class
+
+        progress = tqdm.tqdm(range(epochs), position=0, leave=True)
+        for epoch in range(epochs):
+            # TODO: Fix accuracy function
+            params, opt_state, train_loss = self.enc.update(opt_state, PSI, params)
+
+            # Update progress bar
+            progress.update(1)
+            progress.set_description(f'Loss: {train_loss:.5f}')
+            
+        # Update the parameters after the training and return the new optimizer
+        # state, (for performing multiple trainings)
+        self.enc.PARAMS = params 
+        return opt_state
+    
+    # TODO: Add batching functionality
+    def train_enc(self, epochs : int = 100, train_indices : NDArray = np.array([]), 
+                    batch_size : int = 0, lr : float = 1e-2):
+        """Training function
+
+        Training function assuming 3(4) Phases: 
+        Ferromagnetic, Paramagnetic and Antiphase (Floating Phase)
+
+        Parameters
+        ----------
+        epochs : int
+            Number of epochs
+        train_indices : NDArray
+            Indexes of points to train
+        labels4 : boot
+            If True, use the 4-labels
+        batch_size : int
+            Number of MPS to used as input in a batch
+        lr : float
+            Learning Rate
+        """
+        self.enc.optimizer = optax.adam(learning_rate=lr)
+        probs = self.probs4
+
+        if len(train_indices) == 0:
+            # Set the analytical points as training inputs
+            train_indices = np.arange(len(self.MPS)).astype(int)[self.mask_analitical]
+        else:         
+            train_indices = train_indices
+
+        opt_state = self.enc.optimizer.init(self.enc.PARAMS)
+        if batch_size == 0:
+            STATES  = jnp.array([mpsclass.towave() for mpsclass in self.MPS[train_indices]])
+            YPROBS = probs[train_indices]
+            # Y     = self.labels3[train_indices]
+            print('Labels:', np.unique(np.argmax(YPROBS,axis=1)))
+            print('Number of training points:', len(YPROBS))
+            self._train_enc(epochs, STATES, opt_state)
+        else: 
+            raise NotImplementedError("TODO: Batching not implemented, check model.train_rotate")
+        
+    def compress(self, batch_size : int = 0, plot : bool = True, save : str = ''):
+        """Output the predicted phases
+
+        Output the predicted phases
+
+        Parameters
+        ----------
+        batch_size : int
+            Number of MPS to used as input in a batch
+        plot : bool
+            if True, it plots
+        eachclass : bool 
+            if True, it plots the probability of each class separately
+        """
+        if batch_size == 0:
+            STATES = jnp.array([mpsclass.towave() for mpsclass in self.MPS])
+            
+            COMPRESSIONS = self.enc.jv_get_loss(STATES, self.enc.PARAMS)
+        else: 
+            raise NotImplementedError("TODO: Batching")
+
+        if plot: 
+            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+            plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
+
+        if len(save) > 0:
+            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+            plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
+            plt.savefig(save)
+
+        return COMPRESSIONS  
         
