@@ -75,8 +75,6 @@ class encoder:
             return [qml.expval(qml.PauliZ(int(k))) for k in self.wires_trash]
 
         self.q_circuit    = qml.QNode(circuit, self.device)
-        self.v_q_circuit  = vmap(self.q_circuit, (0, None))
-        self.jv_q_circuit = jit(self.v_q_circuit)
 
         def loss_fun(x, params, qcirc):
             out = jnp.mean(jnp.array(qcirc(x, params)))
@@ -84,23 +82,24 @@ class encoder:
             return 1 - out
                 
         self.get_loss    = lambda x, p: loss_fun(x, p, self.q_circuit)
+        self.j_get_loss = jit(self.get_loss)
         self.v_get_loss  = vmap(self.get_loss, (0, None))
         self.jv_get_loss = jit(self.v_get_loss)
 
-        def mean_loss(p, X):
+        def mean_loss(p, x):
             # self.jv_get_loss outputs the single loss X[i]<->Y[i]
             # we need to reduce the matrix to a single scalar value
-            return jnp.mean(self.jv_get_loss(X, p))
+            return jnp.mean(self.j_get_loss(x, p))
 
-        def optimizer_update(opt, opt_state, X, p):
-            loss, grads = value_and_grad(mean_loss)(p, X)
+        def optimizer_update(opt, opt_state, x, p):
+            loss, grads = value_and_grad(mean_loss)(p, x)
             updates, opt_state = opt.update(grads, opt_state)
             p = optax.apply_updates(p, updates)
             return p, opt_state, loss
         
         # Update the optimizer
         self.optimizer = optax.adam(learning_rate=lr)
-        self.update = jit(lambda opt_state, X, p: optimizer_update(self.optimizer, opt_state, X, p))
+        self.update = lambda opt_state, x, p: optimizer_update(self.optimizer, opt_state, x, p)
 
     def save_params(self, file : str):
         np.savetxt(file, self.PARAMS)

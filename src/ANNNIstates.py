@@ -476,7 +476,7 @@ class mps:
         ANNNIgen.plot_layout(self, True, True, True, '3 Phases + floating phase', haxis = False, figure_already_defined = True)
         ax2.imshow(np.flip(np.reshape(self.labels4, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm4)
 
-    def _train_enc(self, epochs, PSI, opt_state):
+    def _train_enc(self, epochs, psi, opt_state):
         """
         Internal simple training function, to be called by other functions
         """
@@ -485,7 +485,7 @@ class mps:
         progress = tqdm.tqdm(range(epochs), position=0, leave=True)
         for epoch in range(epochs):
             # TODO: Fix accuracy function
-            params, opt_state, train_loss = self.enc.update(opt_state, PSI, params)
+            params, opt_state, train_loss = self.enc.update(opt_state, psi, params)
 
             # Update progress bar
             progress.update(1)
@@ -497,7 +497,7 @@ class mps:
         return opt_state
     
     # TODO: Add batching functionality
-    def train_enc(self, epochs : int = 100, train_indices : NDArray = np.array([]), 
+    def train_enc(self, epochs : int = 100, train_index : int = 0, 
                     batch_size : int = 0, lr : float = 1e-2):
         """Training function
 
@@ -520,20 +520,14 @@ class mps:
         self.enc.optimizer = optax.adam(learning_rate=lr)
         probs = self.probs4
 
-        if len(train_indices) == 0:
-            # Set the analytical points as training inputs
-            train_indices = np.arange(len(self.MPS)).astype(int)[self.mask_analitical]
-        else:         
-            train_indices = train_indices
-
         opt_state = self.enc.optimizer.init(self.enc.PARAMS)
         if batch_size == 0:
-            STATES  = jnp.array([mpsclass.towave() for mpsclass in self.MPS[train_indices]])
-            YPROBS = probs[train_indices]
+            STATE = jnp.array(self.MPS[train_index].towave())
+            Y = probs[train_index]
             # Y     = self.labels3[train_indices]
-            print('Labels:', np.unique(np.argmax(YPROBS,axis=1)))
-            print('Number of training points:', len(YPROBS))
-            self._train_enc(epochs, STATES, opt_state)
+            print('Label:', np.unique(np.argmax(Y)))
+            print('Number of training points:', len(Y))
+            self._train_enc(epochs, STATE, opt_state)
         else: 
             raise NotImplementedError("TODO: Batching not implemented, check model.train_rotate")
         

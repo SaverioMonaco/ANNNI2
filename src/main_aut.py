@@ -33,7 +33,7 @@ args = parser.parse_args()
 
 def run(args):
     TT = ANNNI.mps(folder = f'../tensor_data/{args.load}', gpu=args.gpu)
-    TT.train_enc(epochs=args.epochs, train_indices=[args.point], lr = args.lr)
+    TT.train_enc(epochs=args.epochs, train_index=args.point, lr = args.lr)
     
     if not os.path.exists(f'{folder}{args.save}'):
         os.makedirs(f'{folder}{args.save}')
