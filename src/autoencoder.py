@@ -102,6 +102,12 @@ class encoder:
         self.optimizer = optax.adam(learning_rate=lr)
         self.update = jit(lambda opt_state, X, p: optimizer_update(self.optimizer, opt_state, X, p))
 
+    def save_params(self, file : str):
+        np.savetxt(file, self.PARAMS)
+
+    def load_params(self, file : str):
+        self.PARAMS = np.loadtxt(file)
+
     def __repr__(self):
         @qml.qnode(self.device, interface="jax")
         def circuit_drawer(self):
@@ -110,9 +116,5 @@ class encoder:
             return [qml.expval(qml.PauliZ(int(k))) for k in self.wires_trash]
 
         return qml.draw(circuit_drawer)(self)
-
-    def _state_enc_circuit(self, state, qcnn_p: List[Number]):
-        
-        self.encoder_circuit_fun(qcnn_p)
 
  

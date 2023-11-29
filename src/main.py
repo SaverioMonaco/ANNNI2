@@ -7,7 +7,7 @@ import ANNNIstates as ANNNI
 
 folder = '../runs/'
 now = datetime.datetime.now()
-default_name = f'{now.month}-{now.day}_{now.hour}:{now.minute}:{now.second}'
+default_name = f'QCNN{now.month}-{now.day}_{now.hour}:{now.minute}:{now.second}'
 
 parser = argparse.ArgumentParser(description='Training of QCNN on the ANNNI model. Phases: Ferromagnetic, Paramagnetic, Antiphase, Floatingphase')
 
