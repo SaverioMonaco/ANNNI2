@@ -526,12 +526,11 @@ class mps:
             Y = probs[train_index]
             # Y     = self.labels3[train_indices]
             print('Label:', np.unique(np.argmax(Y)))
-            print('Number of training points:', len(Y))
             self._train_enc(epochs, STATE, opt_state)
         else: 
             raise NotImplementedError("TODO: Batching not implemented, check model.train_rotate")
         
-    def compress(self, batch_size : int = 0, plot : bool = True, save : str = ''):
+    def compress(self, batch_size : int = 0, save : str = '', serial : bool = False, bar : bool = False):
         """Output the predicted phases
 
         Output the predicted phases
@@ -548,17 +547,26 @@ class mps:
         if batch_size == 0:
             STATES = jnp.array([mpsclass.towave() for mpsclass in self.MPS])
             
-            COMPRESSIONS = self.enc.jv_get_loss(STATES, self.enc.PARAMS)
+            if serial:
+                n_states = np.shape(STATES)[0]
+                COMPRESSIONS = np.zeros(n_states)
+                progress = tqdm.tqdm(range(n_states))
+                for i, state in enumerate(STATES):
+                    COMPRESSIONS[i] = self.enc.j_get_loss(state, self.enc.PARAMS)
+                    progress.update(1)
+
+                COMPRESSIONS = np.array(COMPRESSIONS)
+            else:
+                COMPRESSIONS = self.enc.jv_get_loss(STATES, self.enc.PARAMS)
         else: 
             raise NotImplementedError("TODO: Batching")
 
-        if plot: 
-            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
-            plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
-
+        ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+        plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
+        if bar: 
+            cb = plt.colorbar()
+            cb.ax.tick_params(labelsize=16)
         if len(save) > 0:
-            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
-            plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
             plt.savefig(save)
 
         return COMPRESSIONS  

@@ -29,6 +29,10 @@ parser.add_argument('--lr', type=float, default=1e-2, metavar='LR',
 parser.add_argument('--point', type=int, default=0, metavar='INDEX', 
                     help='Index of the single training point')
 
+parser.add_argument('--serial', type=bool, default=False, metavar='BOOL',
+                    help='Compute the compression using the jit function (True) or vmap jit function (False)')
+
+
 args = parser.parse_args()
 
 def run(args):
@@ -40,7 +44,7 @@ def run(args):
 
     TT.enc.save_params(f'{folder}{args.save}/params')
 
-    compressions = TT.compress(save = f'{folder}{args.save}/predict.svg')
+    compressions = TT.compress(save = f'{folder}{args.save}/predict.svg', serial = args.serial, bar = True)
     np.savetxt(f'{folder}{args.save}/predict', compressions)
 
 if __name__ == "__main__":
