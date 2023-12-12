@@ -162,6 +162,8 @@ cython_debug/
 # Tensorini
 tensor_data/
 fake_data/
+
+maria/
 runs/
 # Not my notebooks
 *_ig.ipynb
