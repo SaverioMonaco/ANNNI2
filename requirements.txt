@@ -12,8 +12,8 @@ dm-tree==0.1.8
 fonttools==4.44.0
 future==0.18.3
 idna==3.4
-jax==0.4.8
-jaxlib==0.4.7+cuda12.cudnn88
+# jax==0.4.8
+# jaxlib==0.4.7+cuda12.cudnn88
 kiwisolver==1.4.5
 matplotlib==3.7.1
 ml-dtypes==0.3.1
