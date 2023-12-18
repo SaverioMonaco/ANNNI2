@@ -70,6 +70,7 @@ class qcnn:
             return qml.probs([int(k) for k in self.final_active_wires])
 
         self.q_circuit    = qml.QNode(circuit, self.device)
+        self.j_q_circuit  = jit(self.q_circuit)
         self.v_q_circuit  = vmap(self.q_circuit, (0, None))
         self.jv_q_circuit = jit(self.v_q_circuit)
 
