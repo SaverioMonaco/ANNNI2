@@ -3,22 +3,17 @@
 ### How to install
 1. Create a virtual environment: 
 ```bash
-python3 -m venv env
+python3 -m venv annni
 ```
 
 2. Activate it:
 ```bash
-source env/bin/activate
+source annni/bin/activate
 ```
 
 3. Install the requirements:
 ```bash
-pip3 install -r requirements.txt
-```
-
-4. If you get errors from jax and jaxlib, install them using
-```bash
-pip install -U "jax[cuda12_pip]==0.4.8" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+pip3 install .
 ```
 
 ### How to get the states?
@@ -31,3 +26,5 @@ pip install -U "jax[cuda12_pip]==0.4.8" -f https://storage.googleapis.com/jax-re
    python getdata.py --url https://drive.google.com/drive/u/1/folders/******
    ```
    
+### How to generate new states?
+See the instructions in [dmrg/REAME.md](dmrg/README.md)

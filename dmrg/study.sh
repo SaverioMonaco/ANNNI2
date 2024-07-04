@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-pL=(4 8 12 16   )
-pX=(64 )
-side=20
+pL=(4 8 12 16 32)
+pX=(2 4 8 16 32 64 )
+side=40
 
 for L in "${pL[@]}"
     do
