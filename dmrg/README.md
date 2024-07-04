@@ -13,8 +13,6 @@ python3.8 -m venv dmrg
 source dmrg/bin/activate
 ```
 
-3. 
-
 ## How to use the script 
 A manual can be displayed by running:
 
