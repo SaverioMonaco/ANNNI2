@@ -20,7 +20,7 @@ import itertools
 import tqdm
 
 # Custom
-from ANNNI import general, qcnn, autoencoder
+from ANNNI import general, qcnn, autoencoder, hamiltonian
 
 class State:
     def __init__(self, L : int, h : float, k : float, shapes : NDArray, tensors : NDArray, _towave_func : Callable):
@@ -261,6 +261,10 @@ class Mps:
         self.qcnn = qcnn.Qcnn(self.L)
 
         self.enc = autoencoder.Encoder(self.L)
+
+    def get_fromdiag(self):
+        self.diagonalization = hamiltonian.Hamiltonian(self.L, self.Hparams).get_all()
+        print('Eigenvalues and eigenvectors stored in .diagonalization attribute')
 
     def _train(self, epochs, PSI, Y, opt_state):
         """
