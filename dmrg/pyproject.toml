@@ -1,0 +1,15 @@
+# The basic meta information about hte project
+[project]
+name = "DMRG-ANNNI"
+version = "0.0.1"
+authors = [
+    { name="Saverio Monaco", email="saverio.monaco@desy.de" }
+]
+description = "DMRG script for ANNNI states"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "physics-tenpy == 0.11.0",
+    "tqdm"
+]
+
