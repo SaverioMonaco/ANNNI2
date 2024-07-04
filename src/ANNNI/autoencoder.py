@@ -3,13 +3,9 @@ import pennylane as qml
 from pennylane import numpy as np
 from jax import value_and_grad, jit, vmap, numpy as jnp
 import optax
-
-import circuits
-from typing import List, Callable
+from typing import List
 from numbers import Number
-
-##############
-
+from ANNNI import circuits
 
 def encoder_circuit(N: int, state, params: List[Number]) -> int:
     """
@@ -46,8 +42,7 @@ def encoder_circuit(N: int, state, params: List[Number]) -> int:
 
     return index
 
-
-class encoder:
+class Encoder:
     def __init__(self, L, lr = 1e-2):
         self.n_qubits = L
         self.encoder_circuit_fun = lambda state, enc_p: encoder_circuit(L, state, enc_p)

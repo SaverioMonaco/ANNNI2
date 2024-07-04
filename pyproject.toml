@@ -1,0 +1,60 @@
+# The basic meta information about hte project
+[project]
+name = "ANNNI"
+version = "0.0.1"
+authors = [
+    { name="Saverio Monaco", email="saverio.monaco@desy.de" },
+]
+description = "QML for ANNNI phase detection"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib==3.7.1",
+    "numpy==1.23.5",
+    "opt-einsum==3.3.0",
+    "optax==0.1.5",
+    "PennyLane==0.31.0",
+    "requests==2.31.0",
+    "scipy==1.10.0",
+    "tqdm==4.65.0",
+    "jax[cuda12]==0.4.8",
+    "jaxlib==0.4.7",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest >= 7"
+]
+dev = [
+    "testing-in-python[tests]",  
+    "mypy >= 1.9",
+    "pyright >= 1.1"
+]
+
+# The configuration for pytest to make the tests easily runnable without having
+# to fiddle with the environment first. This follows
+# https://docs.pytest.org/en/stable/explanation/goodpractices.html#tests-outside-application-code
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib"
+]
+
+pythonpath = "src"
+
+# Configuration for the pyright python type checker. See the full documentation
+# at https://microsoft.github.io/pyright/#/ for more information
+[tool.pyright]
+include = ["src"]
+
+# Configuration for the mypy python type checker. See the documentation at
+# https://mypy.readthedocs.io/en/stable/index.html for more information
+[tool.mypy]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/ANNNI"
+]

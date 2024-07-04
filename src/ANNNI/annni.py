@@ -4,9 +4,9 @@ import jax.numpy as jnp
 import numpy as np
 
 from opt_einsum import contract
+
 # Quantum
 import optax
-import pennylane as qml
 
 # Plot
 import matplotlib.pyplot as plt 
@@ -20,11 +20,9 @@ import itertools
 import tqdm
 
 # Custom
-import ANNNIgen
-import mpsgen
-import qcnn, autoencoder as enc
+from ANNNI import general, qcnn, autoencoder
 
-class state:
+class State:
     def __init__(self, L : int, h : float, k : float, shapes : NDArray, tensors : NDArray, _towave_func : Callable):
         """Single ANNNI MPS class
 
@@ -72,7 +70,7 @@ class state:
 
         self.towave = lambda : _towave_func(self.MPS)
         
-class mps:
+class Mps:
     def __init__(self, folder : str = '../tensor_data/', gpu : bool = False):
         """ANNNI MPS class
 
@@ -183,9 +181,9 @@ class mps:
 
         # Check on L
         if len(np.unique(Ls_shape)) > 1 or len(np.unique(Ls_tens)) > 1:
-            raise ValueError(f'L has multiple values')
+            raise ValueError('L has multiple values')
         elif Ls_shape[0] != Ls_tens[0]:
-            raise ValueError(f'L has inconsistent values')
+            raise ValueError('L has inconsistent values')
         # otherwise L is okay:
         self.L = Ls_shape[0]
 
@@ -209,7 +207,7 @@ class mps:
         ###########################
         #      LOAD ALL MPS       #
         ###########################
-        self.mpstowavefunc_subscript = mpsgen.get_subscript(self.L)
+        self.mpstowavefunc_subscript = general.get_subscript(self.L)
         if gpu:
             self.get_psi = lambda TT: contract(self.mpstowavefunc_subscript, *TT, backend='jax').flatten()
         else:
@@ -235,14 +233,14 @@ class mps:
             # 0 | 0 | 0 |
             # 1 | 1 | 0 | 
             # ...
-            y3, y4 = ANNNIgen.get_labels(h,k)
+            y3, y4 = general.get_labels(h,k)
             shapes  = np.loadtxt(self.shape_str(h,k)).astype(int)
             tensors = np.loadtxt(self.tensor_str(h,k))
 
             self.Hparams[i] = h, k
             self.labels3[i], self.labels4[i] = y3, y4
             self.probs3[i],  self.probs4[i]  = _toprob(y3), _toprob(y4)
-            self.MPS[i] = state(self.L, h, k, shapes, tensors, self.get_psi)
+            self.MPS[i] = State(self.L, h, k, shapes, tensors, self.get_psi)
 
         # In the next comments, by analytical I refer to the points
         # being in either of the two axes (k = 0 OR h = 0 (or being inclusive))
@@ -260,9 +258,9 @@ class mps:
         # Mask for all the analytical antiphase points
         self.mask_analitical_anti  = np.logical_and(self.Hparams[:,0] == 0, self.Hparams[:,1] >= .5)
         
-        self.qcnn = qcnn.qcnn(self.L)
+        self.qcnn = qcnn.Qcnn(self.L)
 
-        self.enc = enc.encoder(self.L)
+        self.enc = autoencoder.Encoder(self.L)
 
     def _train(self, epochs, PSI, Y, opt_state):
         """
@@ -391,7 +389,7 @@ class mps:
             X = X.astype(int)
             if show_samples:
                 plt.figure(figsize=(5,5))
-                ANNNIgen.plot_layout(self, True, True, True, title='', figure_already_defined = True)
+                general.plot_layout(self, True, True, True, title='', figure_already_defined = True)
                 plt.imshow(np.flip(np.reshape(samples_map, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm8)
                 plt.show() 
                 
@@ -440,7 +438,7 @@ class mps:
             cmap = self.cm4 
     
         if plot: 
-            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+            general.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
             plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (len(self.hs), len(self.ks))), axis=0), cmap=cmap)
 
             if eachclass:
@@ -449,7 +447,7 @@ class mps:
                     haxis = False if k > 0 else True
                     fig.add_subplot(1,4,k+1)
                     plt.title(f'Class {k}')
-                    ANNNIgen.plot_layout(self, True, True, True, title='', haxis=haxis,  figure_already_defined = True)
+                    general.plot_layout(self, True, True, True, title='', haxis=haxis,  figure_already_defined = True)
                     im = plt.imshow(np.flip(np.reshape(PREDICTIONS[:,k], (len(self.hs), len(self.ks))), axis=0), vmin = 0, vmax = 1)
                 
                 fig.subplots_adjust(right=0.8)
@@ -457,7 +455,7 @@ class mps:
                 fig.colorbar(im, cax=cbar_ax)
 
         if len(save) > 0:
-            ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+            general.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
             plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (len(self.hs), len(self.ks))), axis=0), cmap=cmap)
             plt.savefig(save)
 
@@ -469,11 +467,11 @@ class mps:
         fig = plt.figure(figsize=(10,6))
         ax1 = fig.add_subplot(1,2,1)
         plt.title('Labels (3)')
-        ANNNIgen.plot_layout(self, True, True, True, '3 Phases', figure_already_defined = True)
+        general.plot_layout(self, True, True, True, '3 Phases', figure_already_defined = True)
         ax1.imshow(np.flip(np.reshape(self.labels3, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm3)
         ax2 = fig.add_subplot(1,2,2)
         plt.title('Labels (4)')
-        ANNNIgen.plot_layout(self, True, True, True, '3 Phases + floating phase', haxis = False, figure_already_defined = True)
+        general.plot_layout(self, True, True, True, '3 Phases + floating phase', haxis = False, figure_already_defined = True)
         ax2.imshow(np.flip(np.reshape(self.labels4, (len(self.hs), len(self.ks))), axis=0), cmap=self.cm4)
 
     def _train_enc(self, epochs, psi, opt_state):
@@ -561,7 +559,7 @@ class mps:
         else: 
             raise NotImplementedError("TODO: Batching")
 
-        ANNNIgen.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
+        general.plot_layout(self, True, True, True, 'prediction', figure_already_defined = False)
         plt.imshow(np.flip(np.reshape(COMPRESSIONS, (len(self.hs), len(self.ks))), axis=0), cmap='viridis')
         if bar: 
             cb = plt.colorbar()

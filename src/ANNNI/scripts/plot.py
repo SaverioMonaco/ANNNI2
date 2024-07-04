@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
 import os
-import ANNNIstates as ANNNI
+import ANNNI.annni as ANNNI
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
-import ANNNIgen 
+import ANNNI.general as general 
 
 folder = '../runs/'
 
@@ -67,7 +67,7 @@ def run():
     if len(np.unique(ARGPREDICTIONS)) == 4:
         cmap = cm4 
 
-    ANNNIgen.plot_layout(mps, False, True, True, args.title, figure_already_defined = False)
+    general.plot_layout(mps, False, True, True, args.title, figure_already_defined = False)
     plt.imshow(np.flip(np.reshape(ARGPREDICTIONS, (side, side)), axis=0), cmap=cmap)
     plt.savefig(f'{folder}{args.load}/{args.save}')
 

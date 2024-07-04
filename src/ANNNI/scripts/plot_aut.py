@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
 import os
-import ANNNIstates as ANNNI
+import ANNNI.annni as ANNNI
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
-import ANNNIgen 
+import ANNNI.general as general 
 
 folder = '../runs/'
 
@@ -35,7 +35,7 @@ mps = fakemps(side)
 
 
 def run():
-    ANNNIgen.plot_layout(mps, False, True, True, args.title, figure_already_defined = False)
+    general.plot_layout(mps, False, True, True, args.title, figure_already_defined = False)
     plt.imshow(np.flip(np.reshape(COMPRESSIONS, (side, side)), axis=0), cmap='viridis')
     cb = plt.colorbar()
     cb.ax.tick_params(labelsize=16)

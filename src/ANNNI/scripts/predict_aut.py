@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
 import os
-import ANNNIstates as ANNNI
+import ANNNI.annni as ANNNI
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
-import ANNNIgen 
+import ANNNI.general as general 
 import tqdm
 
 folder = '../runs/'

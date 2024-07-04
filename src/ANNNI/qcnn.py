@@ -1,10 +1,10 @@
 import numpy as np 
 import pennylane as qml 
-import circuits 
 from jax import vmap, jit, numpy as jnp, value_and_grad 
 import optax
+from ANNNI import circuits
 
-class qcnn:
+class Qcnn:
     def __init__(self, L, PARAMS = [], lr = 1e-2):
         """
         This class requires:
