@@ -1,6 +1,6 @@
 import tenpy
 import tenpy.networks.site as tns
-from tenpy.models.model import MPOModel, CouplingModel, MultiCouplingModel
+from tenpy.models.model import MPOModel, CouplingModel
 from tenpy.networks.mps import MPS
 import numpy as np
 from tenpy.algorithms import dmrg
@@ -52,7 +52,7 @@ class ANNNI(CouplingModel):
 
 
     def init_terms(self, model_params):
-        MultiCouplingModel.__init__(self, self.lat)
+        CouplingModel.__init__(self, self.lat)
         j = model_params.get("j", 1.0)
         h = model_params.get("h", 1.0)
         k = model_params.get("k", 0.0)

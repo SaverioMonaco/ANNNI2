@@ -26,5 +26,5 @@ pip3 install .
    python getdata.py --url https://drive.google.com/drive/u/1/folders/******
    ```
    
-### How to generate new states?
-See the instructions in [dmrg/REAME.md](dmrg/README.md)
+### How to generate new states? 
+Use the script [getstates.py](src/ANNNI/scripts/dmrg/getstates.py)
