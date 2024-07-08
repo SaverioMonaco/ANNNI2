@@ -124,46 +124,52 @@ for path in [master_path, L_path, X_path]:
 progress = tqdm.tqdm(range(args.side*args.side), disable=args.hide)
 for h in hs:
         for k in ks:
+                tensor_filename = f"tensor_sites_ANNNI_L_{L}_h_{h:.{3}f}_kappa_{k:.{3}f}"
+                shapes_filename = f"shapes_sites_ANNNI_L_{L}_h_{h:.{3}f}_kappa_{k:.{3}f}"
                 progress.update(1)
-                open_data = dict()
-                model_params = dict(L = L, J = 1.0, k = k, h = h , bc_MPS = 'finite')
-                bc_MPS = model_params["bc_MPS"]
-                model = ANNNI(model_params)
-                psi = MPS.from_product_state(model.lat.mps_sites(), initial_state, bc = bc_MPS)
-                dmrg_params = {'mixer': False,
-                        'chi_list': {0:chi,
-                                # 8:60,
-                                },
-                        # 'max_E_err': 1.e-7,
-                        # 'max_S_err': 1.e-3,
-                        'min_sweeps': 10,
-                        'max_sweeps': 4,
-                        'N_sweeps_check': 4,
-                        'combine': True,
-                        'norm_tol' : 1,
-                        }
-                eng = dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
-                E, psi = eng.run()
-                open_data['E'] = E
-                S = psi.entanglement_entropy()
-                open_data['S'] = S
-                # correlation functions
-                X = psi.expectation_value("Sigmax")
-                Z = psi.expectation_value("Sigmaz")
-                open_data['X'] = X
-                open_data['Z'] = Z
-                i0 = psi.L // 4  # for fixed `i`
-                j = np.arange(i0 + 1, psi.L)
-                XX = psi.term_correlation_function_right([("Sigmax", 0)], [("Sigmax", 0)], i_L=i0, j_R=j)
-                XX_disc = XX - X[i0] * X[j]
-                ZZ = psi.term_correlation_function_right([("Sigmaz", 0)], [("Sigmaz", 0)], i_L=i0, j_R=j)
-                ZZ_disc = ZZ - Z[i0] * Z[j]
-                open_data['XX'] = XX_disc
-                open_data['ZZ'] = ZZ_disc
+                if not (tensor_filename in os.listdir(X_path) and shapes_filename in os.listdir(X_path)):
+                    open_data = dict()
+                    model_params = dict(L = L, J = 1.0, k = k, h = h , bc_MPS = 'finite')
+                    bc_MPS = model_params["bc_MPS"]
+                    model = ANNNI(model_params)
+                    psi = MPS.from_product_state(model.lat.mps_sites(), initial_state, bc = bc_MPS)
+                    dmrg_params = {'mixer': False,
+                            'chi_list': {0:chi,
+                                    # 8:60,
+                                    },
+                            # 'max_E_err': 1.e-7,
+                            # 'max_S_err': 1.e-3,
+                            'min_sweeps': 10,
+                            'max_sweeps': 4,
+                            'N_sweeps_check': 4,
+                            'combine': True,
+                            'norm_tol' : 1,
+                            }
+                    eng = dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
+                    E, psi = eng.run()
+                    open_data['E'] = E
+                    S = psi.entanglement_entropy()
+                    open_data['S'] = S
+                    # correlation functions
+                    X = psi.expectation_value("Sigmax")
+                    Z = psi.expectation_value("Sigmaz")
+                    open_data['X'] = X
+                    open_data['Z'] = Z
+                    i0 = psi.L // 4  # for fixed `i`
+                    j = np.arange(i0 + 1, psi.L)
+                    XX = psi.term_correlation_function_right([("Sigmax", 0)], [("Sigmax", 0)], i_L=i0, j_R=j)
+                    XX_disc = XX - X[i0] * X[j]
+                    ZZ = psi.term_correlation_function_right([("Sigmaz", 0)], [("Sigmaz", 0)], i_L=i0, j_R=j)
+                    ZZ_disc = ZZ - Z[i0] * Z[j]
+                    open_data['XX'] = XX_disc
+                    open_data['ZZ'] = ZZ_disc
 
-                # filename = f"{path}open_properties_L_{L}_h_{h:.{1}f}_kappa_{k:.{3}f}.pickle"
-                # with open(filename, "wb") as file:
-                #        pickle.dump(open_data, file)
+                    # filename = f"{path}open_properties_L_{L}_h_{h:.{1}f}_kappa_{k:.{3}f}.pickle"
+                    # with open(filename, "wb") as file:
+                    #        pickle.dump(open_data, file)
 
-                tensors = [psi.get_B(i)._data[0] for i in range(L)]
-                model.save_sites(tensors, path, model_params)
+                    tensors = [psi.get_B(i)._data[0] for i in range(L)]
+                    model.save_sites(tensors, path, model_params)
+                    
+                else:
+                     print(f'MPS: L:{L}, h:{h}, k:{k} already exists')
