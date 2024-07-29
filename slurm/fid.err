@@ -1,0 +1,127 @@
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 165, in __init__
+    self.files_shape = files_all[np.char.startswith(files_all,'shapes_sites')]
+  File "<__array_function__ internals>", line 180, in startswith
+  File "/home/samonaco/ANNNI2/env/lib/python3.10/site-packages/numpy/core/defchararray.py", line 1502, in startswith
+    return _vec_string(
+TypeError: string operation on non-string array
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/samonaco/ANNNI2/src/ANNNI/scripts/dmrg/fidelity.py", line 44, in <module>
+    model_diag = annni.Mps(f'{datapath_diag}')
+  File "/home/samonaco/ANNNI2/src/ANNNI/annni.py", line 168, in __init__
+    raise TypeError(f'Folder {folder} not found')
+TypeError: Folder /home/samonaco/ANNNI2/slurm/16/diag/ not found
+This is the error log message.
